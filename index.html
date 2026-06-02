@@ -1,0 +1,165 @@
+```html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azar Concurrente - Experimento Rayuela</title>
+    <!-- Motor PDF.js para leer el archivo real desde el servidor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <style>
+        /* Estética Nocturna, Minimalista y Radical */
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #000000;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 40px;
+            box-sizing: border-box;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        header h1 {
+            font-size: 1.4rem;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            color: #444444; /* Apagado al inicio */
+            margin-bottom: 40px;
+            transition: color 1s ease;
+        }
+
+        .canvas {
+            max-width: 700px;
+            width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #texto-poema {
+            font-size: 1.2rem;
+            line-height: 1.8;
+            margin-bottom: 60px;
+            color: #a0a0a0;
+            min-height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: justify;
+            text-justify: inter-word;
+            transition: color 0.3s ease;
+        }
+
+        #btn-disparar {
+            background-color: transparent;
+            color: #ffffff;
+            border: 1px solid #333333;
+            padding: 15px 30px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85rem;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            max-width: 280px;
+            width: 100%;
+            margin: 0 auto;
+            transition: all 0.3s ease;
+            opacity: 0.3;
+            pointer-events: none; /* Bloqueado hasta que cargue el PDF */
+        }
+
+        /* Cuando el sistema está listo */
+        body.listo header h1 {
+            color: #ffffff;
+        }
+
+        body.listo #btn-disparar {
+            border-color: #ffffff;
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        body.listo #btn-disparar:hover {
+            background-color: #ffffff;
+            color: #000000;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 id="titulo">Azar Concurrente</h1>
+    </header>
+
+    <div class="canvas">
+        <div id="texto-poema">Procesando el archivo de la novela...</div>
+        <button id="btn-disparar">Lanzar Fragmento</button>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+        let fragmentosLibro = [];
+        let ultimoIndex = -1;
+
+        const elementoTexto = document.getElementById('texto-poema');
+        const btnDisparar = document.getElementById('btn-disparar');
+
+        async function cargarNovelaOriginal() {
+            try {
+                const respuesta = await fetch('rayuela.pdf');
+                if (!respuesta.ok) throw new Error("No se encontró el archivo rayuela.pdf en el repositorio.");
+                
+                const data = await respuesta.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: data }).promise;
+                let textoBruto = "";
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const pagina = await pdf.getPage(i);
+                    const contenido = await pagina.getTextContent();
+                    const lineas = contenido.items.map(item => item.str);
+                    textoBruto += lineas.join(" ") + " ";
+                }
+
+                // Rompe el texto basándose en los puntos
+                fragmentosLibro = textoBruto
+                    .split(/(?<=[.!?])\s+/)
+                    .map(f => f.trim())
+                    // Filtro técnico para extraer prosa real de Cortázar (entre 60 y 300 caracteres)
+                    .filter(f => f.length > 60 && f.length < 300 && !/^\d+$/.test(f) && !f.includes('http'));
+
+                document.body.classList.add('listo');
+                elementoTexto.textContent = "El libro ha sido desmantelado. Provocá la concurrencia.";
+
+            } catch (error) {
+                console.error(error);
+                elementoTexto.textContent = "Error al desmembrar el archivo original. Asegurate de que 'rayuela.pdf' esté en tu repositorio.";
+            }
+        }
+
+        function lanzarFragmento() {
+            if (fragmentosLibro.length === 0) return;
+
+            let nuevoIndex;
+            do {
+                nuevoIndex = Math.floor(Math.random() * fragmentosLibro.length);
+            } while (nuevoIndex === ultimoIndex && fragmentosLibro.length > 1);
+            
+            ultimoIndex = nuevoIndex;
+            
+            elementoTexto.style.color = "#ffffff";
+            elementoTexto.textContent = `"${fragmentosLibro[ultimoIndex]}"`;
+        }
+
+        btnDisparar.addEventListener('click', lanzarFragmento);
+        window.addEventListener('DOMContentLoaded', cargarNovelaOriginal);
+    </script>
+</body>
+</html>
