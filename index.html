@@ -7,7 +7,7 @@
     <!-- Motor PDF.js para leer el archivo real desde el servidor -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <style>
-        /* Estética Nocturna, Minimalista y Radical */
+        
         body {
             font-family: 'Courier New', Courier, monospace;
             background-color: #000000;
@@ -28,7 +28,7 @@
             font-size: 1.4rem;
             text-transform: uppercase;
             letter-spacing: 5px;
-            color: #444444; /* Apagado al inicio */
+            color: #444444; 
             margin-bottom: 40px;
             transition: color 1s ease;
         }
@@ -130,7 +130,7 @@
                     textoBruto += lineas.join(" ") + " ";
                 }
 
-                // Rompe el texto basándose en la puntuación de las oraciones
+                
                 fragmentosLibro = textoBruto
                     .split(/(?<=[.!?])\s+/)
                     .map(f => f.trim())
