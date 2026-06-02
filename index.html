@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Azar Concurrente - Experimento Rayuela</title>
-    <script src="[https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js](https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js)"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <style>
         body {
             font-family: 'Courier New', Courier, monospace;
@@ -63,6 +63,7 @@
             margin: 0 auto;
             opacity: 0.3;
             pointer-events: none;
+            transition: all 0.3s ease;
         }
         body.listo header h1 { color: #ffffff; }
         body.listo #btn-disparar { border-color: #ffffff; opacity: 1; pointer-events: auto; }
@@ -81,67 +82,83 @@
     </div>
 
     <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '[https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js](https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js)';
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-        let fragmentosLibro = [];
+        let oracionesMundo = [];
 
         async function cargarNovelaOriginal() {
             try {
                 const respuesta = await fetch('rayuela.pdf');
-                if (!respuesta.ok) throw new Error("Error al buscar el PDF");
+                if (!respuesta.ok) throw new Error("No se encontró el PDF");
                 
                 const data = await respuesta.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument({ data: data }).promise;
-                let textoBruto = "";
+                let textoCompleto = "";
 
-                // Absorbe desde la página 12
+                // Lee establemente desde la página 12 hasta el final
                 for (let i = 12; i <= pdf.numPages; i++) {
-                    const pagina = await pdf.getPage(i);
-                    const contenido = await pagina.getTextContent();
-                    textoBruto += contenido.items.map(item => item.str).join(" ") + " ";
-                }
-
-                // Cortamos bloques fijos de texto (no oraciones completas) para asegurar la ruptura sintáctica
-                // Rompe el texto en bloques puros de 120 caracteres
-                const tamañoBloque = 120;
-                for (let i = 0; i < textoBruto.length; i += tamañoBloque) {
-                    let bloque = textoBruto.substr(i, tamañoBloque).trim();
-                    if (bloque.length > 40 && !/^\d+$/.test(bloque)) {
-                        fragmentosLibro.push(bloque);
+                    try {
+                        const pagina = await pdf.getPage(i);
+                        const contenido = await pagina.getTextContent();
+                        textoCompleto += contenido.items.map(item => item.str).join(" ") + " ";
+                    } catch (e) {
+                        // Si alguna página del PDF tiene un error visual interno, la salta y sigue
+                        continue;
                     }
                 }
+
+                // Separación limpia por estructuras de puntuación reales
+                oracionesMundo = textoCompleto
+                    .split(/(?<=[.!?])\s+/)
+                    .map(o => o.trim())
+                    .filter(o => o.length > 35 && !/^\d+$/.test(o) && !o.includes('http'));
 
                 document.body.classList.add('listo');
                 document.getElementById('texto-poema').textContent = "El libro ha sido desmantelado. Provocá la concurrencia.";
 
             } catch (error) {
                 console.error(error);
-                document.getElementById('texto-poema').textContent = "Error al procesar el archivo.";
+                document.getElementById('texto-poema').textContent = "Error al procesar el archivo. Verificá que 'rayuela.pdf' exista.";
             }
         }
 
-        function hibridarTexto() {
-            if (fragmentosLibro.length < 2) return;
+        function cruzarMitades() {
+            if (oracionesMundo.length < 2) return;
 
-            // Elegimos dos bloques de cualquier lugar del PDF
-            let b1 = fragmentosLibro[Math.floor(Math.random() * fragmentosLibro.length)];
-            let b2 = fragmentosLibro[Math.floor(Math.random() * fragmentosLibro.length)];
+            // Elegimos dos oraciones completamente aleatorias (pueden ser de la pág 15 y de la 400)
+            let o1 = oracionesMundo[Math.floor(Math.random() * oracionesMundo.length)];
+            let o2 = oracionesMundo[Math.floor(Math.random() * oracionesMundo.length)];
 
-            // Tijeretazo ciego: primera mitad de uno, segunda mitad del otro
-            let mitad1 = b1.substring(0, Math.floor(b1.length / 2));
-            let mitad2 = b2.substring(Math.floor(b2.length / 2));
+            let palA = o1.split(" ");
+            let palB = o2.split(" ");
 
-            let resultado = (mitad1 + " " + mitad2).trim();
-            
-            // Limpieza visual rápida
-            resultado = resultado.charAt(0).toUpperCase() + resultado.slice(1);
+            // Si son textos demasiado secos, volvemos a intentar automáticamente
+            if (palA.length < 6 || palB.length < 6) {
+                cruzarMitades();
+                return;
+            }
 
-            const el = document.getElementById('texto-poema');
-            el.style.color = "#ffffff";
-            el.textContent = `"${resultado}"`;
+            // Partimos la primera oración por palabras y agarramos la primera mitad
+            let corteA = Math.floor(palA.length / 2);
+            let mitadInicio = palA.slice(0, corteA).join(" ");
+
+            // Partimos la segunda oración y nos quedamos con la segunda mitad
+            let corteB = Math.floor(palB.length / 2);
+            let mitadFinal = palB.slice(corteB).join(" ");
+
+            // Encastre híbrido
+            let oracionMutada = `${mitadInicio} ${mitadFinal}`.trim();
+
+            // Parche ortográfico rápido para que no queden espacios colgados antes de una coma
+            oracionMutada = oracionMutada.replace(/\s+([,.:;!?])/g, '$1');
+            oracionMutada = oracionMutada.charAt(0).toUpperCase() + oracionMutada.slice(1);
+
+            const cajaTexto = document.getElementById('texto-poema');
+            cajaTexto.style.color = "#ffffff";
+            cajaTexto.textContent = `"${oracionMutada}"`;
         }
 
-        document.getElementById('btn-disparar').addEventListener('click', hibridarTexto);
+        document.getElementById('btn-disparar').addEventListener('click', cruzarMitades);
         window.addEventListener('DOMContentLoaded', cargarNovelaOriginal);
     </script>
 </body>
