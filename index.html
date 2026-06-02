@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Azar Concurrente - Experimento Rayuela</title>
-    <!-- Motor PDF.js para leer el archivo real desde el servidor -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="[https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js](https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js)"></script>
     <style>
-        /* Estética Nocturna, Minimalista y Radical */
         body {
             font-family: 'Courier New', Courier, monospace;
             background-color: #000000;
@@ -23,23 +21,20 @@
             text-align: center;
             overflow: hidden;
         }
-
         header h1 {
             font-size: 1.4rem;
             text-transform: uppercase;
             letter-spacing: 5px;
-            color: #444444; /* Apagado al inicio */
+            color: #444444;
             margin-bottom: 40px;
             transition: color 1s ease;
         }
-
         .canvas {
             max-width: 700px;
             width: 100%;
             padding: 20px;
             box-sizing: border-box;
         }
-
         #texto-poema {
             font-size: 1.2rem;
             line-height: 1.8;
@@ -50,10 +45,7 @@
             align-items: center;
             justify-content: center;
             text-align: justify;
-            text-justify: inter-word;
-            transition: color 0.3s ease;
         }
-
         #btn-disparar {
             background-color: transparent;
             color: #ffffff;
@@ -69,127 +61,87 @@
             max-width: 280px;
             width: 100%;
             margin: 0 auto;
-            transition: all 0.3s ease;
             opacity: 0.3;
-            pointer-events: none; /* Bloqueado hasta que cargue el PDF */
+            pointer-events: none;
         }
-
-        /* Cuando el sistema está listo */
-        body.listo header h1 {
-            color: #ffffff;
-        }
-
-        body.listo #btn-disparar {
-            border-color: #ffffff;
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        body.listo #btn-disparar:hover {
-            background-color: #ffffff;
-            color: #000000;
-        }
+        body.listo header h1 { color: #ffffff; }
+        body.listo #btn-disparar { border-color: #ffffff; opacity: 1; pointer-events: auto; }
+        body.listo #btn-disparar:hover { background-color: #ffffff; color: #000000; }
     </style>
 </head>
 <body>
 
     <header>
-        <h1 id="titulo">Azar Concurrente</h1>
+        <h1>Azar Concurrente</h1>
     </header>
 
     <div class="canvas">
-        <div id="texto-poema">Procesando el archivo de la novela...</div>
+        <div id="texto-poema">Desmantelando la novela...</div>
         <button id="btn-disparar">Lanzar Fragmento</button>
     </div>
 
     <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '[https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js](https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js)';
 
         let fragmentosLibro = [];
-
-        const elementoTexto = document.getElementById('texto-poema');
-        const btnDisparar = document.getElementById('btn-disparar');
 
         async function cargarNovelaOriginal() {
             try {
                 const respuesta = await fetch('rayuela.pdf');
-                if (!respuesta.ok) throw new Error("No se encontró el archivo.");
+                if (!respuesta.ok) throw new Error("Error al buscar el PDF");
                 
                 const data = await respuesta.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument({ data: data }).promise;
                 let textoBruto = "";
 
-                // Absorbe de la página 12 hasta el final de la novela en una base única masiva
+                // Absorbe desde la página 12
                 for (let i = 12; i <= pdf.numPages; i++) {
                     const pagina = await pdf.getPage(i);
                     const contenido = await pagina.getTextContent();
-                    const lineas = contenido.items.map(item => item.str);
-                    textoBruto += lineas.join(" ") + " ";
+                    textoBruto += contenido.items.map(item => item.str).join(" ") + " ";
                 }
 
-                // Desguaza el libro completo separando por puntos
-                fragmentosLibro = textoBruto
-                    .split(/(?<=[.!?])\s+/)
-                    .map(f => f.trim())
-                    // Purga líneas huérfanas, números de página e índices
-                    .filter(f => f.length > 40 && !/^\d+$/.test(f) && !f.includes('http'));
+                // Cortamos bloques fijos de texto (no oraciones completas) para asegurar la ruptura sintáctica
+                // Rompe el texto en bloques puros de 120 caracteres
+                const tamañoBloque = 120;
+                for (let i = 0; i < textoBruto.length; i += tamañoBloque) {
+                    let bloque = textoBruto.substr(i, tamañoBloque).trim();
+                    if (bloque.length > 40 && !/^\d+$/.test(bloque)) {
+                        fragmentosLibro.push(bloque);
+                    }
+                }
 
                 document.body.classList.add('listo');
-                elementoTexto.textContent = "El libro ha sido desmantelado. Provocá la concurrencia.";
+                document.getElementById('texto-poema').textContent = "El libro ha sido desmantelado. Provocá la concurrencia.";
 
             } catch (error) {
                 console.error(error);
-                elementoTexto.textContent = "Error al procesar el PDF.";
+                document.getElementById('texto-poema').textContent = "Error al procesar el archivo.";
             }
         }
 
-        // Intercalado absoluto y trans-página
-        function intercalarFragmentos() {
+        function hibridarTexto() {
             if (fragmentosLibro.length < 2) return;
 
-            // Elegimos dos enunciados de CUALQUIER lugar del libro al azar
-            let indexA = Math.floor(Math.random() * fragmentosLibro.length);
-            let indexB;
+            // Elegimos dos bloques de cualquier lugar del PDF
+            let b1 = fragmentosLibro[Math.floor(Math.random() * fragmentosLibro.length)];
+            let b2 = fragmentosLibro[Math.floor(Math.random() * fragmentosLibro.length)];
+
+            // Tijeretazo ciego: primera mitad de uno, segunda mitad del otro
+            let mitad1 = b1.substring(0, Math.floor(b1.length / 2));
+            let mitad2 = b2.substring(Math.floor(b2.length / 2));
+
+            let resultado = (mitad1 + " " + mitad2).trim();
             
-            // Forzamos que la segunda frase sea distinta para garantizar la mutación
-            do {
-                indexB = Math.floor(Math.random() * fragmentosLibro.length);
-            } while (indexA === indexB);
+            // Limpieza visual rápida
+            resultado = resultado.charAt(0).toUpperCase() + resultado.slice(1);
 
-            let fraseA = fragmentosLibro[indexA];
-            let fraseB = fragmentosLibro[indexB];
-
-            let palabrasA = fraseA.split(" ");
-            let palabrasB = fraseB.split(" ");
-
-            // Si alguna es críticamente corta, reintentamos el disparo de forma transparente
-            if (palabrasA.length < 5 || palabrasB.length < 5) {
-                intercalarFragmentos();
-                return;
-            }
-
-            // Quiebre dinámico: Corta cerca de la mitad de la primera frase
-            let mitadA = Math.floor(palabrasA.length / 2);
-            let inicioHibrido = palabrasA.slice(0, mitadA).join(" ");
-
-            // Quiebre dinámico: Toma la segunda mitad de la otra frase (de otra página)
-            let mitadB = Math.floor(palabrasB.length / 2);
-            let finalHibrido = palabrasB.slice(mitadB).join(" ");
-
-            // Ensamblaje molecular
-            let textoMutado = `${inicioHibrido} ${finalHibrido}`;
-
-            // Limpieza ortotipográfica de cicatrices del choque de textos
-            textoMutado = textoMutado.replace(/\s+([,.:;!?])/g, '$1');
-
-            // Aseguramos que empiece con mayúscula por si la segunda mitad arrastró cosas raras
-            textoMutado = textoMutado.charAt(0).toUpperCase() + textoMutado.slice(1);
-
-            elementoTexto.style.color = "#ffffff";
-            elementoTexto.textContent = `"${textoMutado}"`;
+            const el = document.getElementById('texto-poema');
+            el.style.color = "#ffffff";
+            el.textContent = `"${resultado}"`;
         }
 
-        btnDisparar.addEventListener('click', intercalarFragmentos);
+        document.getElementById('btn-disparar').addEventListener('click', hibridarTexto);
         window.addEventListener('DOMContentLoaded', cargarNovelaOriginal);
     </script>
 </body>
