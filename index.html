@@ -125,28 +125,28 @@
         function cruzarMitades() {
             if (oracionesMundo.length < 2) return;
 
-            // Elegimos dos oraciones completamente aleatorias (pueden ser de la pág 15 y de la 400)
+           
             let o1 = oracionesMundo[Math.floor(Math.random() * oracionesMundo.length)];
             let o2 = oracionesMundo[Math.floor(Math.random() * oracionesMundo.length)];
 
             let palA = o1.split(" ");
             let palB = o2.split(" ");
 
-            // Si son textos demasiado secos, volvemos a intentar automáticamente
+            
             if (palA.length < 6 || palB.length < 6) {
                 cruzarMitades();
                 return;
             }
 
-            // Partimos la primera oración por palabras y agarramos la primera mitad
+            
             let corteA = Math.floor(palA.length / 2);
             let mitadInicio = palA.slice(0, corteA).join(" ");
 
-            // Partimos la segunda oración y nos quedamos con la segunda mitad
+            
             let corteB = Math.floor(palB.length / 2);
             let mitadFinal = palB.slice(corteB).join(" ");
 
-            // Encastre híbrido
+            // Encastre 
             let oracionMutada = `${mitadInicio} ${mitadFinal}`.trim();
 
             // Parche ortográfico rápido para que no queden espacios colgados antes de una coma
