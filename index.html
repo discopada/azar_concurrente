@@ -120,8 +120,8 @@
                 const pdf = await pdfjsLib.getDocument({ data: data }).promise;
                 let textoBruto = "";
 
-                // MODIFICACIÓN CRUCIAL: Empezamos en la página 15 para saltear prólogos, índices y portadas del editor
-                const paginaInicio = Math.min(15, pdf.numPages);
+                // AJUSTE SOLICITADO: Forzamos el inicio estricto desde la página 12
+                const paginaInicio = Math.min(12, pdf.numPages);
 
                 for (let i = paginaInicio; i <= pdf.numPages; i++) {
                     const pagina = await pdf.getPage(i);
@@ -130,11 +130,11 @@
                     textoBruto += lineas.join(" ") + " ";
                 }
 
-                // Rompe el texto basándose en los puntos
+                // Rompe el texto basándose en la puntuación de las oraciones
                 fragmentosLibro = textoBruto
                     .split(/(?<=[.!?])\s+/)
                     .map(f => f.trim())
-                    // Filtro para extraer prosa con sustancia (entre 60 y 300 caracteres)
+                    // Filtro para extraer fragmentos con sustancia (entre 60 y 300 caracteres)
                     .filter(f => f.length > 60 && f.length < 300 && !/^\d+$/.test(f) && !f.includes('http'));
 
                 document.body.classList.add('listo');
