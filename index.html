@@ -7,7 +7,7 @@
     <!-- Motor PDF.js para leer el archivo real desde el servidor -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <style>
-        
+        /* Estética Nocturna, Minimalista y Radical */
         body {
             font-family: 'Courier New', Courier, monospace;
             background-color: #000000;
@@ -28,7 +28,7 @@
             font-size: 1.4rem;
             text-transform: uppercase;
             letter-spacing: 5px;
-            color: #444444; 
+            color: #444444; /* Apagado al inicio */
             margin-bottom: 40px;
             transition: color 1s ease;
         }
@@ -106,7 +106,6 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
         let fragmentosLibro = [];
-        let ultimoIndex = -1;
 
         const elementoTexto = document.getElementById('texto-poema');
         const btnDisparar = document.getElementById('btn-disparar');
@@ -114,53 +113,83 @@
         async function cargarNovelaOriginal() {
             try {
                 const respuesta = await fetch('rayuela.pdf');
-                if (!respuesta.ok) throw new Error("No se encontró el archivo rayuela.pdf en el repositorio.");
+                if (!respuesta.ok) throw new Error("No se encontró el archivo.");
                 
                 const data = await respuesta.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument({ data: data }).promise;
                 let textoBruto = "";
 
-                // AJUSTE SOLICITADO: Forzamos el inicio estricto desde la página 12
-                const paginaInicio = Math.min(12, pdf.numPages);
-
-                for (let i = paginaInicio; i <= pdf.numPages; i++) {
+                // Absorbe de la página 12 hasta el final de la novela en una base única masiva
+                for (let i = 12; i <= pdf.numPages; i++) {
                     const pagina = await pdf.getPage(i);
                     const contenido = await pagina.getTextContent();
                     const lineas = contenido.items.map(item => item.str);
                     textoBruto += lineas.join(" ") + " ";
                 }
 
-                
+                // Desguaza el libro completo separando por puntos
                 fragmentosLibro = textoBruto
                     .split(/(?<=[.!?])\s+/)
                     .map(f => f.trim())
-                    // Filtro para extraer fragmentos con sustancia (entre 60 y 300 caracteres)
-                    .filter(f => f.length > 60 && f.length < 300 && !/^\d+$/.test(f) && !f.includes('http'));
+                    // Purga líneas huérfanas, números de página e índices
+                    .filter(f => f.length > 40 && !/^\d+$/.test(f) && !f.includes('http'));
 
                 document.body.classList.add('listo');
                 elementoTexto.textContent = "El libro ha sido desmantelado. Provocá la concurrencia.";
 
             } catch (error) {
                 console.error(error);
-                elementoTexto.textContent = "Error al desmembrar el archivo original. Asegurate de que 'rayuela.pdf' esté en tu repositorio.";
+                elementoTexto.textContent = "Error al procesar el PDF.";
             }
         }
 
-        function lanzarFragmento() {
-            if (fragmentosLibro.length === 0) return;
+        // Intercalado absoluto y trans-página
+        function intercalarFragmentos() {
+            if (fragmentosLibro.length < 2) return;
 
-            let nuevoIndex;
+            // Elegimos dos enunciados de CUALQUIER lugar del libro al azar
+            let indexA = Math.floor(Math.random() * fragmentosLibro.length);
+            let indexB;
+            
+            // Forzamos que la segunda frase sea distinta para garantizar la mutación
             do {
-                nuevoIndex = Math.floor(Math.random() * fragmentosLibro.length);
-            } while (nuevoIndex === ultimoIndex && fragmentosLibro.length > 1);
-            
-            ultimoIndex = nuevoIndex;
-            
+                indexB = Math.floor(Math.random() * fragmentosLibro.length);
+            } while (indexA === indexB);
+
+            let fraseA = fragmentosLibro[indexA];
+            let fraseB = fragmentosLibro[indexB];
+
+            let palabrasA = fraseA.split(" ");
+            let palabrasB = fraseB.split(" ");
+
+            // Si alguna es críticamente corta, reintentamos el disparo de forma transparente
+            if (palabrasA.length < 5 || palabrasB.length < 5) {
+                intercalarFragmentos();
+                return;
+            }
+
+            // Quiebre dinámico: Corta cerca de la mitad de la primera frase
+            let mitadA = Math.floor(palabrasA.length / 2);
+            let inicioHibrido = palabrasA.slice(0, mitadA).join(" ");
+
+            // Quiebre dinámico: Toma la segunda mitad de la otra frase (de otra página)
+            let mitadB = Math.floor(palabrasB.length / 2);
+            let finalHibrido = palabrasB.slice(mitadB).join(" ");
+
+            // Ensamblaje molecular
+            let textoMutado = `${inicioHibrido} ${finalHibrido}`;
+
+            // Limpieza ortotipográfica de cicatrices del choque de textos
+            textoMutado = textoMutado.replace(/\s+([,.:;!?])/g, '$1');
+
+            // Aseguramos que empiece con mayúscula por si la segunda mitad arrastró cosas raras
+            textoMutado = textoMutado.charAt(0).toUpperCase() + textoMutado.slice(1);
+
             elementoTexto.style.color = "#ffffff";
-            elementoTexto.textContent = `"${fragmentosLibro[ultimoIndex]}"`;
+            elementoTexto.textContent = `"${textoMutado}"`;
         }
 
-        btnDisparar.addEventListener('click', lanzarFragmento);
+        btnDisparar.addEventListener('click', intercalarFragmentos);
         window.addEventListener('DOMContentLoaded', cargarNovelaOriginal);
     </script>
 </body>
